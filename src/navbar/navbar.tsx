@@ -15,7 +15,7 @@ const createOrdersData = () => {
       return {...item, orderId};
     })
     return items;
-  }).flat();
+  }).flat().sort((item1: any, item2: any)=> item2.orderId - item1.orderId);
 };
 
 function NavBar() {
