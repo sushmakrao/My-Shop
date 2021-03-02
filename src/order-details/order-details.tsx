@@ -7,14 +7,21 @@ import { ProgressBar } from '../progress-bar/progressbar';
 import './order-details.scss';
 import moment from 'moment';
 
-const getOrderDetails = (orderId: string, itemId: string) => {
+const getOrderDetails = (orderId: string, itemId: string)  => {
     let allOrders: any = JSON.stringify(orders);
     allOrders = JSON.parse(allOrders).default;
+   
     let currentOrder = allOrders.find((order: any) => order.orderId.toString() === orderId);
+    let items = JSON.parse(JSON.stringify(currentOrder.items));
+    delete currentOrder.items;
     console.log(currentOrder);
-    let currentOrderItem = currentOrder.items.find((item: any) => item.id.toString() === itemId);
-    return {...currentOrder, item: currentOrderItem};
-};
+    let detailed_items=items.map((item: any) =>{
+        return{...currentOrder,...item};
+    })
+    console.log(detailed_items);
+    return detailed_items;
+    
+};  
 
 const delayedItem = (orderDetails: any) =>  {
     const address = orderDetails.shippingAddress;
@@ -25,8 +32,8 @@ const delayedItem = (orderDetails: any) =>  {
             <hr></hr>
             <p className="font-weight-bold text-dark"> Heads up: The shipped date changed.</p>
             <p>Before we can complete your order, review the new date to confirm if you're OK with it.</p>
-            <ProgressBar status={orderDetails.item.status} />
-            <p className="font-weight-bold text-dark"> Items ordered: {orderDetails.items.length}</p>
+            <ProgressBar status={orderDetails.status} />
+            <p className="font-weight-bold text-dark"> Items ordered: {orderDetails.quantity}</p>
             <p>
                 Don't forget to let us know if you accept the new ship date. We'll cancel order if we don't hear from you soon.
             </p>
@@ -35,7 +42,7 @@ const delayedItem = (orderDetails: any) =>  {
                     New estimated ship date:
                 </p>
                 <p>
-                    {moment(orderDetails.item.newEstimatedShipDateRange.fromDate).format("LL")} - {moment(orderDetails.item.newEstimatedShipDateRange.toDate).format("LL")}
+                    {moment(orderDetails.newEstimatedShipDateRange.fromDate).format("LL")} - {moment(orderDetails.newEstimatedShipDateRange.toDate).format("LL")}
                 </p>
 
             </div>
@@ -44,7 +51,7 @@ const delayedItem = (orderDetails: any) =>  {
                     Original estimated ship date:
                 </p>
                 <p>
-                    {moment(orderDetails.item.estimatedShipDateRange.fromDate).format("LL")} - {moment(orderDetails.item.estimatedShipDateRange.toDate).format("LL")}
+                    {moment(orderDetails.estimatedShipDateRange.fromDate).format("LL")} - {moment(orderDetails.estimatedShipDateRange.toDate).format("LL")}
                 </p>
             </div>
 
@@ -75,7 +82,7 @@ const orderedItem = (orderDetails: any) => {
 
 const shippedItem = (orderDetails: any) => {
     const shipments = orderDetails.shipments;
-    const shipment = shipments.find((shipment: any) => shipment.items.includes(orderDetails.item.id));
+    const shipment = shipments.find((shipment: any) => shipment.items.includes(orderDetails.id));
     const address = orderDetails.shippingAddress;
 
     return (
@@ -84,8 +91,8 @@ const shippedItem = (orderDetails: any) => {
             <hr></hr>
             <p className="font-weight-bold text-dark"> Get excited!</p>
             <p>Fun stuff is heading your way.</p>
-            <ProgressBar status={orderDetails.item.status} />
-            <p className="font-weight-bold text-dark"> Items ordered: {orderDetails.items.length}</p>
+            <ProgressBar status={orderDetails.status} />
+            <p className="font-weight-bold text-dark"> Items ordered: {orderDetails.quantity}</p>
             <div>
                 <p className="font-weight-bold text-dark">
                     {shipment.carrier} tracking:
@@ -115,7 +122,7 @@ const shippedItem = (orderDetails: any) => {
 
 const deliveredItem = (orderDetails: any) => {
     const shipments = orderDetails.shipments;
-    const shipment = shipments.find((shipment: any) => shipment.items.includes(orderDetails.item.id));
+    const shipment = shipments.find((shipment: any) => shipment.items.includes(orderDetails.id));
     const address = orderDetails.shippingAddress;
     return (
         <>
@@ -123,8 +130,8 @@ const deliveredItem = (orderDetails: any) => {
             <hr></hr>
             <p className="font-weight-bold text-dark"> Are you thrilled!</p>
             <p>You fun stuff has been shipped!</p>
-            <ProgressBar status={orderDetails.item.status} />
-            <p className="font-weight-bold text-dark"> Items ordered: {orderDetails.items.length}</p>
+            <ProgressBar status={orderDetails.status} />
+            <p className="font-weight-bold text-dark"> Items ordered: {orderDetails.quantity}</p>
             <div>
                 <p className="font-weight-bold text-dark">
                     {shipment.carrier} tracking:
@@ -155,55 +162,58 @@ const deliveredItem = (orderDetails: any) => {
 
 export const OrderDetails = () => {
     const params: any = useParams();
-    const orderDetails: any = getOrderDetails(params.orderId, params.itemId);
-    const {item} = orderDetails;
-    const {image, name, skuAttributes, quantity} = item;
 
+    const orderDetails: any = getOrderDetails(params.orderId , params.ItemId);
+    console.log(orderDetails);
     return (
         <>
             <div className="App">
                 <NavBar />
             </div>
             <Container className="order-details-container">
-                <Row>
-                    <Col xs={12} md={6} lg={6}>
-                    {
-                        !!item.userAcceptedDelay ? delayedItem(orderDetails) : null
-                    }
-                    {
-                        (item.status === 'ordered' && !item.userAcceptedDelay) ? orderedItem(orderDetails) : null
-                    }
-                    {
-                        item.status === 'shipped' ? shippedItem(orderDetails) : null
-                    }
-                    {
-                        item.status === 'delivered' ? deliveredItem(orderDetails) : null
-                    }
-                    </Col>
-                    <Col xs={12} md={6} lg={6}>
-                        <Card>
-                            <Row>
-                                <Col xs={6} md={12} lg={6}>
-                                    <Card.Img variant="top" src={image} />
-                                </Col>
-                                <Col xs={6} md={12} lg={6}>
-                                    <Card.Body>
-                                        <Card.Text>
-                                            <div>
-                                                <p><span className="font-weight-bold text-dark">{name}</span></p>
-                                                <p><span>{skuAttributes.color}</span></p>
-                                                <p><span>{skuAttributes.size}</span></p>
-                                                <p>Qty: <span>{quantity}</span></p>
-                                            </div>
-                                        </Card.Text>
-                                        
-                                    </Card.Body>
-                                </Col>
-                            </Row>
-                        </Card>
-                    </Col>
-                </Row>
+                {orderDetails.map((item:any, index:any) => {
+
+                  return( <Row>
+                   <Col xs={12} md={6} lg={6}>
+                   {
+                       !!item.userAcceptedDelay ? delayedItem(item) : null
+                   }
+                   {
+                       (item.status === 'ordered' && !item.userAcceptedDelay) ? orderedItem(item) : null
+                   }
+                   {
+                       item.status === 'shipped' ? shippedItem(item) : null
+                   }
+                   {
+                       item.status === 'delivered' ? deliveredItem(item) : null
+                   }
+                   </Col>
+                   <Col xs={12} md={6} lg={6}>
+                       <Card>
+                           <Row>
+                               <Col xs={6} md={12} lg={6}>
+                                   <Card.Img variant="top" src={item.image} />
+                               </Col>
+                               <Col xs={6} md={12} lg={6}>
+                                   <Card.Body>
+                                       <Card.Text>
+                                           <div>
+                                               <p><span className="font-weight-bold text-dark">{item.name}</span></p>
+                                               <p><span>{item.skuAttributes.color}</span></p>
+                                               <p><span>{item.skuAttributes.size}</span></p>
+                                               <p>Qty: <span>{item.quantity}</span></p>
+                                           </div>
+                                       </Card.Text>
+                                       
+                                   </Card.Body>
+                               </Col>
+                           </Row>
+                       </Card>
+                   </Col>
+               </Row> )
+                })}
             </Container>
         </>
     )
-};
+}
+;
